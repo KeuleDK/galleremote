@@ -10,6 +10,7 @@ import org.greenrobot.eventbus.Subscribe;
 import org.greenrobot.eventbus.ThreadMode;
 
 import com.j256.ormlite.dao.Dao;
+import com.j256.ormlite.stmt.QueryBuilder;
 import com.rene_arnold.galleremote.event.DelayChangedEvent;
 import com.rene_arnold.galleremote.event.ImagesChangedEvent;
 import com.rene_arnold.galleremote.event.ReloadEvent;
@@ -94,7 +95,7 @@ public class FullscreenActivity extends Activity {
 				@Override
 				public View makeView() {
 					ImageView myView = new ImageView(getApplicationContext());
-					myView.setScaleType(ImageView.ScaleType.CENTER);
+					myView.setScaleType(ImageView.ScaleType.FIT_CENTER);
 					myView.setLayoutParams(
 							new ImageSwitcher.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
 					return myView;
@@ -155,10 +156,10 @@ public class FullscreenActivity extends Activity {
 	@Override
 	protected void onPostCreate(Bundle savedInstanceState) {
 		super.onPostCreate(savedInstanceState);
-		Dao<Image, Integer> dao;
 		try {
-			dao = databaseHelper.getDao(Image.class);
-			this.images = dao.queryForAll();
+			QueryBuilder<Image, ?> queryBuilder = databaseHelper.getDao(Image.class).queryBuilder();
+			queryBuilder.orderBy(Image.COLUMN_ID, false);
+			this.images = queryBuilder.query();
 		} catch (Exception e) {
 			this.images = new ArrayList<Image>();
 		}

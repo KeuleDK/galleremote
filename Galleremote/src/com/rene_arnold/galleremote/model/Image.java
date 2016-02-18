@@ -11,15 +11,19 @@ import android.net.Uri;
 @DatabaseTable(tableName = Image.TABLE_NAME)
 public class Image {
 
+	public static final String COLUMN_ID = "id";
+	public static final String COLUMN_SAVE_POINT = "savePoint";
+	public static final String COLUMN_IMAGE_ADDRESS = "imageAddress";
+
 	public static final String TABLE_NAME = "image";
 
-	@DatabaseField(generatedId = true)
+	@DatabaseField(generatedId = true, columnName = COLUMN_ID)
 	private int id;
 
-	@DatabaseField
+	@DatabaseField(columnName = COLUMN_IMAGE_ADDRESS)
 	private String imageAddress;
 
-	@DatabaseField
+	@DatabaseField(columnName = COLUMN_SAVE_POINT)
 	private String savePoint;
 
 	/**
