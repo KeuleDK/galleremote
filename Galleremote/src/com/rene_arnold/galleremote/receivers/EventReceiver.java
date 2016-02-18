@@ -50,6 +50,7 @@ public class EventReceiver {
 		DatabaseHelper databaseHelper = ((FullscreenActivity) context).getDatabaseHelper();
 		Dao<Image, Integer> dao = databaseHelper.getDao(Image.class);
 		List<Image> imageList = dao.queryForAll();
+		List<Image> newImages = new ArrayList<Image>();
 		if (urls == null || urls.isEmpty()) {
 			return imageList;
 		}
@@ -63,7 +64,7 @@ public class EventReceiver {
 					if (image.getImageAddress().equals(url)) {
 						// if found -> take it
 						unusedImages.remove(image);
-						imageList.add(image);
+						newImages.add(image);
 						continue urlList;
 					}
 				}
@@ -75,7 +76,7 @@ public class EventReceiver {
 				image.setImageAddress(url);
 				image.setSavePoint(uri);
 				dao.create(image);
-				imageList.add(image);
+				newImages.add(image);
 			}
 			// at least -> delete unused images
 			for (Image image : unusedImages) {
@@ -83,7 +84,7 @@ public class EventReceiver {
 			}
 			dao.delete(unusedImages);
 		}
-		return imageList;
+		return newImages;
 	}
 
 	private void deleteImage(Image image) {

@@ -51,7 +51,7 @@ public class FullscreenActivity extends Activity {
 	/**
 	 * the {@link List} of {@link Image}s
 	 */
-	private List<Image> images;
+	private volatile List<Image> images;
 
 	private EventReceiver eventReceiver;
 	private DatabaseHelper databaseHelper;
@@ -221,7 +221,7 @@ public class FullscreenActivity extends Activity {
 	private void nextImage() {
 		if (images.isEmpty()) {
 			counter = 0;
-			setImage(null);
+//			setImage(null);
 			return;
 		}
 		counter = (counter + 1) % images.size();
@@ -244,6 +244,9 @@ public class FullscreenActivity extends Activity {
 	}
 
 	public void setImage(Image image) {
+		if(image==null)
+			switcher.setImageURI(null);
+		else
 		switcher.setImageURI(image.getSavePoint());
 	}
 
