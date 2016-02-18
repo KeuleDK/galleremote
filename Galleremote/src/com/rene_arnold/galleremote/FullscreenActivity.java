@@ -24,6 +24,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.view.KeyEvent;
 import android.view.View;
+import android.view.View.OnClickListener;
 import android.view.ViewGroup.LayoutParams;
 import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
@@ -108,6 +109,17 @@ public class FullscreenActivity extends Activity {
 
 			switcher.setInAnimation(aniIn);
 			switcher.setOutAnimation(aniOut);
+			switcher.setOnClickListener(new OnClickListener() {
+
+				@Override
+				public void onClick(View arg0) {
+					handler.removeCallbacks(startImageScrollRunnable);
+					handler.removeCallbacks(showNextImage);
+					handler.removeCallbacks(reloadRequest);
+					nextImage();
+					handler.postDelayed(startImageScrollRunnable, 30000);
+				}
+			});
 		}
 
 		reloadRequest = new Runnable() {
@@ -207,6 +219,11 @@ public class FullscreenActivity extends Activity {
 	}
 
 	private void nextImage() {
+		if (images.isEmpty()) {
+			counter = 0;
+			setImage(null);
+			return;
+		}
 		counter = (counter + 1) % images.size();
 		setImage(images.get(counter));
 	}
@@ -285,7 +302,7 @@ public class FullscreenActivity extends Activity {
 		handler.removeCallbacks(showNextImage);
 		boolean wasEmpty = images.isEmpty();
 		images = event.getImages();
-		if(wasEmpty && !images.isEmpty()){
+		if (wasEmpty && !images.isEmpty()) {
 			setImage(images.iterator().next());
 		}
 		handler.postDelayed(showNextImage, delay);
