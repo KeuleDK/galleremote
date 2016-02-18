@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="app_name">GalleRemote</string>
+
+    <string name="exit_confirmation">Zum Beenden noch einmal Exit drücken.</string>
+    <string name="automatic_screenplay">Automatischer Bildlauf aktiviert.</string>
+
+</resources>
