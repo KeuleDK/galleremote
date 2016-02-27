@@ -10,6 +10,10 @@ import org.greenrobot.eventbus.EventBus;
 import org.greenrobot.eventbus.Subscribe;
 import org.greenrobot.eventbus.ThreadMode;
 
+import android.content.Context;
+import android.net.Uri;
+import android.util.Log;
+
 import com.j256.ormlite.dao.Dao;
 import com.rene_arnold.galleremote.FullscreenActivity;
 import com.rene_arnold.galleremote.event.DelayChangedEvent;
@@ -18,10 +22,6 @@ import com.rene_arnold.galleremote.event.ReloadEvent;
 import com.rene_arnold.galleremote.model.Image;
 import com.rene_arnold.galleremote.services.HttpRestService;
 import com.rene_arnold.galleremote.util.DatabaseHelper;
-
-import android.content.Context;
-import android.net.Uri;
-import android.util.Log;
 
 public class EventReceiver {
 	private static final String DEBUG_TAG = EventReceiver.class.getSimpleName();
@@ -36,18 +36,20 @@ public class EventReceiver {
 	}
 
 	/**
-	 * Gets the current {@link List} of Images and compares it to the
-	 * {@link List} provided by the server. New {@link Image}s will be downloaded and added and
+	 * Gets the current {@link List} of Images and compares it to the {@link List}
+	 * provided by the server. New {@link Image}s will be downloaded and added and
 	 * no longer used {@link Image}s will be deleted from Database and
 	 * File-System.
 	 * 
-	 * @param urls the {@link List} of {@link URL}s provided by the server
+	 * @param urls
+	 *          the {@link List} of {@link URL}s provided by the server
 	 * @return the new {@link List} of {@link Image}s
 	 * @throws SQLException
-	 *             if the database is not accessible
+	 *           if the database is not accessible
 	 */
 	private List<Image> syncImages(List<URL> urls) throws SQLException {
-		DatabaseHelper databaseHelper = ((FullscreenActivity) context).getDatabaseHelper();
+		DatabaseHelper databaseHelper = ((FullscreenActivity) context)
+				.getDatabaseHelper();
 		Dao<Image, Integer> dao = databaseHelper.getDao(Image.class);
 		List<Image> imageList = dao.queryForAll();
 		List<Image> newImages = new ArrayList<Image>();
@@ -58,13 +60,19 @@ public class EventReceiver {
 		imageCache = new ArrayList<URL>(urls);
 		if (context instanceof FullscreenActivity) {
 
+			int position = 1;
 			urlList: for (URL url : urls) {
 				// search for existing
 				for (Image image : imageList) {
 					if (image.getImageAddress().equals(url)) {
 						// if found -> take it
 						unusedImages.remove(image);
+						if (image.getPosition() != position) {
+							image.setPosition(position);
+							dao.update(image);
+						}
 						newImages.add(image);
+						position++;
 						continue urlList;
 					}
 				}
@@ -75,8 +83,10 @@ public class EventReceiver {
 				Image image = new Image();
 				image.setImageAddress(url);
 				image.setSavePoint(uri);
+				image.setPosition(position);
 				dao.create(image);
 				newImages.add(image);
+				position++;
 			}
 			// at least -> delete unused images
 			for (Image image : unusedImages) {
@@ -97,7 +107,8 @@ public class EventReceiver {
 		Log.d(DEBUG_TAG, "Reload data from Server");
 		HttpRestService httpRestService = HttpRestService.getInstance(context);
 		Long delay = httpRestService.getDelay();
-		if (delay != null && (delayCache == null || delay.longValue() != delayCache.longValue())) {
+		if (delay != null
+				&& (delayCache == null || delay.longValue() != delayCache.longValue())) {
 			EventBus.getDefault().post(new DelayChangedEvent(delay));
 			Log.d(DEBUG_TAG, "Delay changed");
 			delayCache = delay;

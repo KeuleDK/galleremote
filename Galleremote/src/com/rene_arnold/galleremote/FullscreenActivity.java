@@ -3,26 +3,22 @@ package com.rene_arnold.galleremote;
 import java.io.File;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.greenrobot.eventbus.EventBus;
 import org.greenrobot.eventbus.Subscribe;
 import org.greenrobot.eventbus.ThreadMode;
 
-import com.j256.ormlite.dao.Dao;
-import com.j256.ormlite.stmt.QueryBuilder;
-import com.rene_arnold.galleremote.event.DelayChangedEvent;
-import com.rene_arnold.galleremote.event.ImagesChangedEvent;
-import com.rene_arnold.galleremote.event.ReloadEvent;
-import com.rene_arnold.galleremote.model.Image;
-import com.rene_arnold.galleremote.model.Setting;
-import com.rene_arnold.galleremote.receivers.EventReceiver;
-import com.rene_arnold.galleremote.util.DatabaseHelper;
-
 import android.app.Activity;
+import android.graphics.Bitmap;
+import android.graphics.drawable.BitmapDrawable;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
+import android.provider.MediaStore;
+import android.util.Log;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.View.OnClickListener;
@@ -33,6 +29,16 @@ import android.widget.ImageSwitcher;
 import android.widget.ImageView;
 import android.widget.Toast;
 import android.widget.ViewSwitcher.ViewFactory;
+
+import com.j256.ormlite.dao.Dao;
+import com.j256.ormlite.stmt.QueryBuilder;
+import com.rene_arnold.galleremote.event.DelayChangedEvent;
+import com.rene_arnold.galleremote.event.ImagesChangedEvent;
+import com.rene_arnold.galleremote.event.ReloadEvent;
+import com.rene_arnold.galleremote.model.Image;
+import com.rene_arnold.galleremote.model.Setting;
+import com.rene_arnold.galleremote.receivers.EventReceiver;
+import com.rene_arnold.galleremote.util.DatabaseHelper;
 
 /**
  *
@@ -63,7 +69,7 @@ public class FullscreenActivity extends Activity {
 	private Handler handler = new Handler();
 
 	private static final int RELOAD_DELAY = 15 * 60 * 1000; // 15 min
-	private static final long FALLBACK_DELAY = 5 * 60 * 1000; // 5 min
+	private static final long FALLBACK_DELAY = 2 * 60 * 1000; // 5 min
 
 	private long exitRequest = 0;
 
@@ -75,6 +81,8 @@ public class FullscreenActivity extends Activity {
 	private Runnable showNextImage;
 	private Runnable reloadRequest;
 	private Runnable startImageScrollRunnable;
+
+	private Map<Image, BitmapDrawable> bitmapTable = new HashMap<Image, BitmapDrawable>();
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -96,16 +104,18 @@ public class FullscreenActivity extends Activity {
 				public View makeView() {
 					ImageView myView = new ImageView(getApplicationContext());
 					myView.setScaleType(ImageView.ScaleType.FIT_CENTER);
-					myView.setLayoutParams(
-							new ImageSwitcher.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
+					myView.setLayoutParams(new ImageSwitcher.LayoutParams(
+							LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
 					return myView;
 				}
 			});
 
 			// add cross-fading
-			Animation aniIn = AnimationUtils.loadAnimation(this, android.R.anim.fade_in);
+			Animation aniIn = AnimationUtils.loadAnimation(this,
+					android.R.anim.fade_in);
 			aniIn.setDuration(1000);
-			Animation aniOut = AnimationUtils.loadAnimation(this, android.R.anim.fade_out);
+			Animation aniOut = AnimationUtils.loadAnimation(this,
+					android.R.anim.fade_out);
 			aniOut.setDuration(1000);
 
 			switcher.setInAnimation(aniIn);
@@ -140,7 +150,8 @@ public class FullscreenActivity extends Activity {
 				handler.removeCallbacks(reloadRequest);
 				handler.postDelayed(showNextImage, delay);
 				handler.postDelayed(reloadRequest, RELOAD_DELAY);
-				Toast toast = Toast.makeText(FullscreenActivity.this, R.string.automatic_screenplay, Toast.LENGTH_LONG);
+				Toast toast = Toast.makeText(FullscreenActivity.this,
+						R.string.automatic_screenplay, Toast.LENGTH_LONG);
 				toast.show();
 			}
 		};
@@ -150,6 +161,15 @@ public class FullscreenActivity extends Activity {
 	protected void onDestroy() {
 		EventBus.getDefault().unregister(eventReceiver);
 		EventBus.getDefault().unregister(this);
+		for (Image image : bitmapTable.keySet()) {
+			BitmapDrawable bitmapDrawable = bitmapTable.get(image);
+			bitmapDrawable.getBitmap().recycle();
+		}
+		images.clear();
+		bitmapTable.clear();
+		handler.removeCallbacks(reloadRequest);
+		handler.removeCallbacks(startImageScrollRunnable);
+		handler.removeCallbacks(showNextImage);
 		super.onDestroy();
 	}
 
@@ -157,8 +177,9 @@ public class FullscreenActivity extends Activity {
 	protected void onPostCreate(Bundle savedInstanceState) {
 		super.onPostCreate(savedInstanceState);
 		try {
-			QueryBuilder<Image, ?> queryBuilder = databaseHelper.getDao(Image.class).queryBuilder();
-			queryBuilder.orderBy(Image.COLUMN_ID, false);
+			QueryBuilder<Image, ?> queryBuilder = databaseHelper.getDao(Image.class)
+					.queryBuilder();
+			queryBuilder.orderBy(Image.COLUMN_POSITION, true);
 			this.images = queryBuilder.query();
 		} catch (Exception e) {
 			this.images = new ArrayList<Image>();
@@ -171,6 +192,21 @@ public class FullscreenActivity extends Activity {
 			}
 		} catch (Exception e) {
 		}
+		for (Image image : images) {
+			try {
+				Bitmap bitmap = MediaStore.Images.Media.getBitmap(
+						this.getContentResolver(), image.getSavePoint());
+				BitmapDrawable drawable = new BitmapDrawable(getResources(), bitmap);
+				bitmapTable.put(image, drawable);
+			} catch (Exception e) {
+				Log.w(FullscreenActivity.class.getSimpleName(), e.getClass()
+						.getSimpleName(), e);
+			} catch (OutOfMemoryError e) {
+				Log.w(FullscreenActivity.class.getSimpleName(), e.getClass()
+						.getSimpleName(), e);
+			}
+		}
+
 		if (images.size() > 0) {
 			setImage(images.iterator().next());
 		}
@@ -210,7 +246,8 @@ public class FullscreenActivity extends Activity {
 				finish();
 			} else {
 				exitRequest = System.currentTimeMillis();
-				Toast t = Toast.makeText(this, R.string.exit_confirmation, Toast.LENGTH_LONG);
+				Toast t = Toast.makeText(this, R.string.exit_confirmation,
+						Toast.LENGTH_LONG);
 				t.show();
 			}
 			break;
@@ -222,33 +259,34 @@ public class FullscreenActivity extends Activity {
 	private void nextImage() {
 		if (images.isEmpty()) {
 			counter = 0;
-//			setImage(null);
+			// setImage(null);
 			return;
 		}
 		counter = (counter + 1) % images.size();
-		setImage(images.get(counter));
+		setImage(getCurrentImage());
+	}
+
+	private Image getCurrentImage() {
+		return images.get(counter);
 	}
 
 	private void prevImage() {
 		counter = (counter - 1) % images.size();
 		if (counter < 0)
 			counter += images.size();
-		setImage(images.get(counter));
+		setImage(getCurrentImage());
 	}
 
 	public void setImageFile(File file) {
+		// recyleOldImage();
 		switcher.setImageURI(Uri.fromFile(file));
 	}
 
-	public void setImageUri(Uri uri) {
-		switcher.setImageURI(uri);
-	}
-
 	public void setImage(Image image) {
-		if(image==null)
-			switcher.setImageURI(null);
-		else
-		switcher.setImageURI(image.getSavePoint());
+		if (image == null)
+			setImage(null);
+		BitmapDrawable drawable = bitmapTable.get(image);
+		switcher.setImageDrawable(drawable);
 	}
 
 	public DatabaseHelper getDatabaseHelper() {
@@ -279,7 +317,8 @@ public class FullscreenActivity extends Activity {
 				handler.removeCallbacks(reloadRequest);
 				handler.postDelayed(showNextImage, delay);
 				handler.postDelayed(reloadRequest, RELOAD_DELAY);
-				Toast toast = Toast.makeText(FullscreenActivity.this, R.string.automatic_screenplay, Toast.LENGTH_LONG);
+				Toast toast = Toast.makeText(FullscreenActivity.this,
+						R.string.automatic_screenplay, Toast.LENGTH_LONG);
 				toast.show();
 			}
 		};
@@ -305,9 +344,33 @@ public class FullscreenActivity extends Activity {
 	public void onImagesChangedEvent(ImagesChangedEvent event) {
 		handler.removeCallbacks(showNextImage);
 		boolean wasEmpty = images.isEmpty();
+		Image currentImage = null;
+		if (!wasEmpty)
+			currentImage = getCurrentImage();
 		images = event.getImages();
+		for (Image image : images) {
+			if (!bitmapTable.containsKey(image)) {
+				try {
+					Bitmap bitmap = MediaStore.Images.Media.getBitmap(
+							this.getContentResolver(), image.getSavePoint());
+					BitmapDrawable drawable = new BitmapDrawable(getResources(), bitmap);
+					bitmapTable.put(image, drawable);
+				} catch (Exception e) {
+					Log.w(FullscreenActivity.class.getSimpleName(), e.getClass()
+							.getSimpleName(), e);
+				} catch (OutOfMemoryError e) {
+					Log.w(FullscreenActivity.class.getSimpleName(), e.getClass()
+							.getSimpleName(), e);
+				}
+			}
+		}
+		Image newImage = getCurrentImage();
 		if (wasEmpty && !images.isEmpty()) {
 			setImage(images.iterator().next());
+		} else if (currentImage != null
+				&& !currentImage.getImageAddress().equals(newImage.getImageAddress())) {
+			// if current image is replaced -> show new image
+			setImage(newImage);
 		}
 		handler.postDelayed(showNextImage, delay);
 	}

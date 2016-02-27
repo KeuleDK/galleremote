@@ -13,7 +13,7 @@ import android.database.sqlite.SQLiteDatabase;
 
 public class DatabaseHelper extends OrmLiteSqliteOpenHelper {
 
-	public static final int DATABASE_VERSION = 2;
+	public static final int DATABASE_VERSION = 3;
 	public static final String DATABASE_NAME = "Galleremote.db";
 
 	public DatabaseHelper(Context context) {
@@ -31,10 +31,15 @@ public class DatabaseHelper extends OrmLiteSqliteOpenHelper {
 	}
 
 	@Override
-	public void onUpgrade(SQLiteDatabase db, ConnectionSource connectionSource, int oldVersion, int newVersion) {
+	public void onUpgrade(SQLiteDatabase db, ConnectionSource connectionSource,
+			int oldVersion, int newVersion) {
 		try {
 			if (oldVersion < 2) {
 				TableUtils.createTable(connectionSource, Setting.class);
+			}
+			if (oldVersion < 3) {
+				TableUtils.dropTable(connectionSource, Image.class, true);
+				TableUtils.createTable(connectionSource, Image.class);
 			}
 		} catch (SQLException e) {
 			e.printStackTrace();
