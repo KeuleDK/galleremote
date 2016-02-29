@@ -11,6 +11,16 @@ import org.greenrobot.eventbus.EventBus;
 import org.greenrobot.eventbus.Subscribe;
 import org.greenrobot.eventbus.ThreadMode;
 
+import com.j256.ormlite.dao.Dao;
+import com.j256.ormlite.stmt.QueryBuilder;
+import com.rene_arnold.galleremote.event.DelayChangedEvent;
+import com.rene_arnold.galleremote.event.ImagesChangedEvent;
+import com.rene_arnold.galleremote.event.ReloadEvent;
+import com.rene_arnold.galleremote.model.Image;
+import com.rene_arnold.galleremote.model.Setting;
+import com.rene_arnold.galleremote.receivers.EventReceiver;
+import com.rene_arnold.galleremote.util.DatabaseHelper;
+
 import android.app.Activity;
 import android.graphics.Bitmap;
 import android.graphics.drawable.BitmapDrawable;
@@ -23,22 +33,13 @@ import android.view.KeyEvent;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.ViewGroup.LayoutParams;
+import android.view.WindowManager;
 import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
 import android.widget.ImageSwitcher;
 import android.widget.ImageView;
 import android.widget.Toast;
 import android.widget.ViewSwitcher.ViewFactory;
-
-import com.j256.ormlite.dao.Dao;
-import com.j256.ormlite.stmt.QueryBuilder;
-import com.rene_arnold.galleremote.event.DelayChangedEvent;
-import com.rene_arnold.galleremote.event.ImagesChangedEvent;
-import com.rene_arnold.galleremote.event.ReloadEvent;
-import com.rene_arnold.galleremote.model.Image;
-import com.rene_arnold.galleremote.model.Setting;
-import com.rene_arnold.galleremote.receivers.EventReceiver;
-import com.rene_arnold.galleremote.util.DatabaseHelper;
 
 /**
  *
@@ -69,7 +70,7 @@ public class FullscreenActivity extends Activity {
 	private Handler handler = new Handler();
 
 	private static final int RELOAD_DELAY = 15 * 60 * 1000; // 15 min
-	private static final long FALLBACK_DELAY = 2 * 60 * 1000; // 5 min
+	private static final long FALLBACK_DELAY = 2 * 60 * 1000; // 2 min
 
 	private long exitRequest = 0;
 
@@ -87,6 +88,8 @@ public class FullscreenActivity extends Activity {
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
+
+		getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
 		setContentView(R.layout.activity_fullscreen);
 
@@ -141,6 +144,7 @@ public class FullscreenActivity extends Activity {
 			}
 		};
 
+		getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_HIDE_NAVIGATION);
 		handler.postDelayed(reloadRequest, RELOAD_DELAY);
 		startImageScrollRunnable = new Runnable() {
 
@@ -153,6 +157,7 @@ public class FullscreenActivity extends Activity {
 				Toast toast = Toast.makeText(FullscreenActivity.this,
 						R.string.automatic_screenplay, Toast.LENGTH_LONG);
 				toast.show();
+				getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_HIDE_NAVIGATION);
 			}
 		};
 	}
@@ -320,6 +325,7 @@ public class FullscreenActivity extends Activity {
 				Toast toast = Toast.makeText(FullscreenActivity.this,
 						R.string.automatic_screenplay, Toast.LENGTH_LONG);
 				toast.show();
+				getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_HIDE_NAVIGATION);
 			}
 		};
 
