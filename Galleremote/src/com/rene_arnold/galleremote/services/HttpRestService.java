@@ -157,11 +157,14 @@ public class HttpRestService {
 				InputStream inputStream = urlConnection.getInputStream();
 				byte[] buffer = new byte[1024];
 				int bufferLength = 0;
+				int wroteSize = 0;
 				while ((bufferLength = inputStream.read(buffer)) > 0) {
 					fileOutput.write(buffer, 0, bufferLength);
+					wroteSize += buffer.length;
 				}
 				fileOutput.close();
 				urlConnection.disconnect();
+				File readFile = new File(filePath);
 				return file;
 			} catch (MalformedURLException e) {
 				Log.w(LOG_TAG, e);

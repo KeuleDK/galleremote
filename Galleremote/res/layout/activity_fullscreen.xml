@@ -5,9 +5,24 @@
     android:background="#000000"
     tools:context="com.rene_arnold.galleremote.FullscreenActivity" >
 
-    <ImageSwitcher
-        android:id="@+id/image_switcher"
+    <RelativeLayout
         android:layout_width="match_parent"
-        android:layout_height="match_parent" />
+        android:layout_height="match_parent" >
+
+        <ImageSwitcher
+            android:id="@+id/image_switcher"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" >
+        </ImageSwitcher>
+
+        <ProgressBar
+            android:id="@+id/progressBar1"
+            style="?android:attr/progressBarStyleHorizontal"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_alignParentBottom="true"
+            android:layout_marginBottom="0dp"/>
+
+    </RelativeLayout>
 
 </FrameLayout>

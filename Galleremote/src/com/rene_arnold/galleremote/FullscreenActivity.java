@@ -16,6 +16,8 @@ import com.j256.ormlite.stmt.QueryBuilder;
 import com.rene_arnold.galleremote.event.DelayChangedEvent;
 import com.rene_arnold.galleremote.event.ImagesChangedEvent;
 import com.rene_arnold.galleremote.event.ReloadEvent;
+import com.rene_arnold.galleremote.event.SyncStartEvent;
+import com.rene_arnold.galleremote.event.SyncUpdateEvent;
 import com.rene_arnold.galleremote.model.Image;
 import com.rene_arnold.galleremote.model.Setting;
 import com.rene_arnold.galleremote.receivers.EventReceiver;
@@ -38,6 +40,7 @@ import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
 import android.widget.ImageSwitcher;
 import android.widget.ImageView;
+import android.widget.ProgressBar;
 import android.widget.Toast;
 import android.widget.ViewSwitcher.ViewFactory;
 
@@ -51,6 +54,7 @@ public class FullscreenActivity extends Activity {
 	 */
 	private ImageSwitcher switcher;
 
+	private ProgressBar progressBar;
 	/**
 	 * a pointer to the currently shown image
 	 */
@@ -107,18 +111,16 @@ public class FullscreenActivity extends Activity {
 				public View makeView() {
 					ImageView myView = new ImageView(getApplicationContext());
 					myView.setScaleType(ImageView.ScaleType.FIT_CENTER);
-					myView.setLayoutParams(new ImageSwitcher.LayoutParams(
-							LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
+					myView.setLayoutParams(
+							new ImageSwitcher.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
 					return myView;
 				}
 			});
 
 			// add cross-fading
-			Animation aniIn = AnimationUtils.loadAnimation(this,
-					android.R.anim.fade_in);
+			Animation aniIn = AnimationUtils.loadAnimation(this, android.R.anim.fade_in);
 			aniIn.setDuration(1000);
-			Animation aniOut = AnimationUtils.loadAnimation(this,
-					android.R.anim.fade_out);
+			Animation aniOut = AnimationUtils.loadAnimation(this, android.R.anim.fade_out);
 			aniOut.setDuration(1000);
 
 			switcher.setInAnimation(aniIn);
@@ -134,6 +136,12 @@ public class FullscreenActivity extends Activity {
 					handler.postDelayed(startImageScrollRunnable, 30000);
 				}
 			});
+		}
+
+		View progressBar = findViewById(R.id.progressBar1);
+		if (progressBar instanceof ProgressBar) {
+			this.progressBar = (ProgressBar) progressBar;
+			this.progressBar.setVisibility(View.INVISIBLE);
 		}
 
 		reloadRequest = new Runnable() {
@@ -154,8 +162,7 @@ public class FullscreenActivity extends Activity {
 				handler.removeCallbacks(reloadRequest);
 				handler.postDelayed(showNextImage, delay);
 				handler.postDelayed(reloadRequest, RELOAD_DELAY);
-				Toast toast = Toast.makeText(FullscreenActivity.this,
-						R.string.automatic_screenplay, Toast.LENGTH_LONG);
+				Toast toast = Toast.makeText(FullscreenActivity.this, R.string.automatic_screenplay, Toast.LENGTH_LONG);
 				toast.show();
 				getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_HIDE_NAVIGATION);
 			}
@@ -182,8 +189,7 @@ public class FullscreenActivity extends Activity {
 	protected void onPostCreate(Bundle savedInstanceState) {
 		super.onPostCreate(savedInstanceState);
 		try {
-			QueryBuilder<Image, ?> queryBuilder = databaseHelper.getDao(Image.class)
-					.queryBuilder();
+			QueryBuilder<Image, ?> queryBuilder = databaseHelper.getDao(Image.class).queryBuilder();
 			queryBuilder.orderBy(Image.COLUMN_POSITION, true);
 			this.images = queryBuilder.query();
 		} catch (Exception e) {
@@ -199,16 +205,13 @@ public class FullscreenActivity extends Activity {
 		}
 		for (Image image : images) {
 			try {
-				Bitmap bitmap = MediaStore.Images.Media.getBitmap(
-						this.getContentResolver(), image.getSavePoint());
+				Bitmap bitmap = MediaStore.Images.Media.getBitmap(this.getContentResolver(), image.getSavePoint());
 				BitmapDrawable drawable = new BitmapDrawable(getResources(), bitmap);
 				bitmapTable.put(image, drawable);
 			} catch (Exception e) {
-				Log.w(FullscreenActivity.class.getSimpleName(), e.getClass()
-						.getSimpleName(), e);
+				Log.w(FullscreenActivity.class.getSimpleName(), e.getClass().getSimpleName(), e);
 			} catch (OutOfMemoryError e) {
-				Log.w(FullscreenActivity.class.getSimpleName(), e.getClass()
-						.getSimpleName(), e);
+				Log.w(FullscreenActivity.class.getSimpleName(), e.getClass().getSimpleName(), e);
 			}
 		}
 
@@ -251,8 +254,7 @@ public class FullscreenActivity extends Activity {
 				finish();
 			} else {
 				exitRequest = System.currentTimeMillis();
-				Toast t = Toast.makeText(this, R.string.exit_confirmation,
-						Toast.LENGTH_LONG);
+				Toast t = Toast.makeText(this, R.string.exit_confirmation, Toast.LENGTH_LONG);
 				t.show();
 			}
 			break;
@@ -322,8 +324,7 @@ public class FullscreenActivity extends Activity {
 				handler.removeCallbacks(reloadRequest);
 				handler.postDelayed(showNextImage, delay);
 				handler.postDelayed(reloadRequest, RELOAD_DELAY);
-				Toast toast = Toast.makeText(FullscreenActivity.this,
-						R.string.automatic_screenplay, Toast.LENGTH_LONG);
+				Toast toast = Toast.makeText(FullscreenActivity.this, R.string.automatic_screenplay, Toast.LENGTH_LONG);
 				toast.show();
 				getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_HIDE_NAVIGATION);
 			}
@@ -357,27 +358,38 @@ public class FullscreenActivity extends Activity {
 		for (Image image : images) {
 			if (!bitmapTable.containsKey(image)) {
 				try {
-					Bitmap bitmap = MediaStore.Images.Media.getBitmap(
-							this.getContentResolver(), image.getSavePoint());
+					Bitmap bitmap = MediaStore.Images.Media.getBitmap(this.getContentResolver(), image.getSavePoint());
 					BitmapDrawable drawable = new BitmapDrawable(getResources(), bitmap);
 					bitmapTable.put(image, drawable);
 				} catch (Exception e) {
-					Log.w(FullscreenActivity.class.getSimpleName(), e.getClass()
-							.getSimpleName(), e);
+					Log.w(FullscreenActivity.class.getSimpleName(), e.getClass().getSimpleName(), e);
 				} catch (OutOfMemoryError e) {
-					Log.w(FullscreenActivity.class.getSimpleName(), e.getClass()
-							.getSimpleName(), e);
+					Log.w(FullscreenActivity.class.getSimpleName(), e.getClass().getSimpleName(), e);
 				}
 			}
 		}
 		Image newImage = getCurrentImage();
 		if (wasEmpty && !images.isEmpty()) {
 			setImage(images.iterator().next());
-		} else if (currentImage != null
-				&& !currentImage.getImageAddress().equals(newImage.getImageAddress())) {
+		} else if (currentImage != null && !currentImage.getImageAddress().equals(newImage.getImageAddress())) {
 			// if current image is replaced -> show new image
 			setImage(newImage);
 		}
 		handler.postDelayed(showNextImage, delay);
+	}
+
+	@Subscribe(threadMode = ThreadMode.MAIN)
+	public void onSyncStartEvent(SyncStartEvent event) {
+		this.progressBar.setVisibility(View.VISIBLE);
+		this.progressBar.setProgress(0);
+		this.progressBar.setMax(event.getLength());
+	}
+
+	@Subscribe(threadMode = ThreadMode.MAIN)
+	public void onSyncUpdateEvent(SyncUpdateEvent event) {
+		this.progressBar.setProgress(event.getPos());
+		if(progressBar.getProgress() == progressBar.getMax()){
+			progressBar.setVisibility(View.INVISIBLE);
+		}
 	}
 }

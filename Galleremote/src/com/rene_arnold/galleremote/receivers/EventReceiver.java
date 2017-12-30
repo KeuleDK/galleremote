@@ -10,18 +10,20 @@ import org.greenrobot.eventbus.EventBus;
 import org.greenrobot.eventbus.Subscribe;
 import org.greenrobot.eventbus.ThreadMode;
 
-import android.content.Context;
-import android.net.Uri;
-import android.util.Log;
-
 import com.j256.ormlite.dao.Dao;
 import com.rene_arnold.galleremote.FullscreenActivity;
 import com.rene_arnold.galleremote.event.DelayChangedEvent;
 import com.rene_arnold.galleremote.event.ImagesChangedEvent;
 import com.rene_arnold.galleremote.event.ReloadEvent;
+import com.rene_arnold.galleremote.event.SyncStartEvent;
+import com.rene_arnold.galleremote.event.SyncUpdateEvent;
 import com.rene_arnold.galleremote.model.Image;
 import com.rene_arnold.galleremote.services.HttpRestService;
 import com.rene_arnold.galleremote.util.DatabaseHelper;
+
+import android.content.Context;
+import android.net.Uri;
+import android.util.Log;
 
 public class EventReceiver {
 	private static final String DEBUG_TAG = EventReceiver.class.getSimpleName();
@@ -59,7 +61,7 @@ public class EventReceiver {
 		List<Image> unusedImages = new ArrayList<Image>(imageList);
 		imageCache = new ArrayList<URL>(urls);
 		if (context instanceof FullscreenActivity) {
-
+			EventBus.getDefault().post(new SyncStartEvent(urls.size()));
 			int position = 1;
 			urlList: for (URL url : urls) {
 				// search for existing
@@ -72,6 +74,7 @@ public class EventReceiver {
 							dao.update(image);
 						}
 						newImages.add(image);
+						EventBus.getDefault().post(new SyncUpdateEvent(position));
 						position++;
 						continue urlList;
 					}
@@ -86,6 +89,7 @@ public class EventReceiver {
 				image.setPosition(position);
 				dao.create(image);
 				newImages.add(image);
+				EventBus.getDefault().post(new SyncUpdateEvent(position));
 				position++;
 			}
 			// at least -> delete unused images
